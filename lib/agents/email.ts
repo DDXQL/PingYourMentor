@@ -67,7 +67,7 @@ export async function emailGeneration(
 
   try {
     const parsed = JSON.parse(response);
-    const fullEmail = [
+    const combinedEmail = [
       parsed.subject ? `Subject: ${parsed.subject}` : '',
       parsed.greeting || '',
       '',
@@ -86,7 +86,7 @@ export async function emailGeneration(
       introduction: parsed.introduction || '',
       body: parsed.body || '',
       closing: parsed.closing || '',
-      fullEmail: parsed.fullEmail || fullEmail,
+      fullEmail: parsed.fullEmail || combinedEmail,
       estimatedLength: parsed.estimatedLength || 'Medium',
       keyPoints: parsed.keyPoints || [],
     };
