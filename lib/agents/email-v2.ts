@@ -52,7 +52,7 @@ ${JSON.stringify(student, null, 2)}
 - 避免提及：${strategy.avoid.join(', ')}
 - 核心策略：${strategy.core}
 
-请基于以上信息，生成一封真实的套磁邮件。`;
+请基于以上信息，以JSON格式生成一封真实的套磁邮件。`;
 
   const response = await createChatCompletion(
     [

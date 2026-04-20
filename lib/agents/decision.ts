@@ -71,7 +71,7 @@ ${JSON.stringify(profile.mentor, null, 2)}
 学生画像：
 ${JSON.stringify(profile.student, null, 2)}
 
-请基于以上信息，生成完整的决策分析报告。`;
+请基于以上信息，以JSON格式生成完整的决策分析报告。`;
 
   const response = await createChatCompletion(
     [
