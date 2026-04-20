@@ -57,7 +57,7 @@ ${mentorText}
 学生简历：
 ${resumeText}
 
-请严格按照上述JSON格式输出，mentor和student字段都必须存在。
+请严格按照上述JSON格式输出，mentor和student字段都必须存在。`;
 
   const response = await createChatCompletion(
     [
