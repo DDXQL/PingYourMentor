@@ -1,7 +1,7 @@
 // =============================================================================
 // Email Agent - Agent 3: 邮件生成
 // =============================================================================
-// 基于策略生成真实、非模板化的套磁邮件
+// 基于策略生成真实、非模板化的套磁邮件（双语版本）
 
 import { createChatCompletion } from './openai';
 import type { ProfileMentor, ProfileStudent } from './profile';
@@ -10,13 +10,24 @@ import type { Strategy } from './decision';
 export interface EmailDraft {
   subject: string;
   body: string;
+  chineseEmail?: {
+    subject: string;
+    body: string;
+  };
+}
+
+export interface EmailDraftWithChinese extends EmailDraft {
+  chineseEmail: {
+    subject: string;
+    body: string;
+  };
 }
 
 export async function emailAgent(
   mentor: ProfileMentor,
   student: ProfileStudent,
   strategy: Strategy
-): Promise<EmailDraft> {
+): Promise<EmailDraftWithChinese> {
   const systemPrompt = `你是一个研究生套磁邮件写作助手。
 
 任务：基于策略生成一封"真实、非模板化"的套磁邮件。
@@ -24,12 +35,16 @@ export async function emailAgent(
 输出格式（必须严格遵循）：
 {
   "subject": "邮件主题，简洁明了",
-  "body": "邮件正文内容"
+  "body": "邮件正文内容（英文）",
+  "chineseEmail": {
+    "subject": "邮件主题（中文）",
+    "body": "邮件正文内容（中文）"
+  }
 }
 
 要求：
-- 邮件正文使用英文
-- 长度控制在 150-250 词
+- body 使用英文，chineseEmail.body 使用中文
+- 长度控制在 150-250 词（英文）
 - 必须具体，不能模板化
 - 禁止使用：
   * "I am very interested"
@@ -38,7 +53,8 @@ export async function emailAgent(
 - 必须体现：
   * 学生与导师的具体匹配点
   * 至少一个研究关键词
-- subject 不要包含 "PhD" 或 "Admission" 等常见词`;
+- subject 不要包含 "PhD" 或 "Admission" 等常见词
+- 中文邮件要自然流畅，符合中国学生风格`;
 
   const userPrompt = `导师画像：
 ${JSON.stringify(mentor, null, 2)}
@@ -52,7 +68,7 @@ ${JSON.stringify(student, null, 2)}
 - 避免提及：${strategy.avoid.join(', ')}
 - 核心策略：${strategy.core}
 
-请基于以上信息，以JSON格式生成一封真实的套磁邮件。`;
+请基于以上信息，以JSON格式生成一封套磁邮件，同时包含英文和中文版本。`;
 
   const response = await createChatCompletion(
     [
@@ -69,7 +85,14 @@ ${JSON.stringify(student, null, 2)}
   console.log('[Email Agent] Raw response:', response);
 
   try {
-    return JSON.parse(response) as EmailDraft;
+    const parsed = JSON.parse(response);
+    if (!parsed.chineseEmail) {
+      parsed.chineseEmail = {
+        subject: parsed.subject,
+        body: parsed.body,
+      };
+    }
+    return parsed as EmailDraftWithChinese;
   } catch {
     throw new Error('Email agent 返回格式错误: ' + response);
   }

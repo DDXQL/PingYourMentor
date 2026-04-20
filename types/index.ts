@@ -40,6 +40,10 @@ export interface Strategy {
 export interface EmailDraft {
   subject: string;
   body: string;
+  chineseEmail?: {
+    subject: string;
+    body: string;
+  };
 }
 
 export type DecisionType = '推荐' | '谨慎' | '不推荐';
