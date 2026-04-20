@@ -71,9 +71,6 @@ export async function POST(request: NextRequest) {
 
     // 验证决策数据
     const validatedDecision = validateDecision(decision);
-
-    // 验证决策数据
-    const validatedDecision = validateDecision(decision);
     console.log('[v1.5] Validated decision:', JSON.stringify(validatedDecision));
 
     // Step 3: 邮件生成
