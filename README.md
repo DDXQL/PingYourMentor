@@ -136,41 +136,40 @@ Input → Profile Agent → Decision Agent → Email Agent → Output
 
 | 分支 | 用途 | Vercel 环境 |
 |------|------|-------------|
-| `main` | 稳定版本 | Production (线上) |
-| `dev` | 开发测试 | Preview |
+| `main` | 生产环境（稳定） | Production 线上 |
+| `dev` | 开发测试 | Preview 预览 |
 
-### 开发流程
+### 快速命令
 
 ```bash
-# 1. 切换到 dev 分支开发
+# 切换到 dev 开始开发
 git checkout dev
 
-# 2. 开发新功能...
-
-# 3. 提交到 dev（自动生成 Preview 预览链接）
+# 提交代码
 git add .
-git commit -m "feat: 新功能描述"
+git commit -m "feat: 你的修改"
 git push
 
-# 4. 测试没问题后，合并到 main
+# 测试通过后合并到 main
 git checkout main
 git merge dev
 git push origin main
 
-# 5. 切回 dev 继续开发
+# 切回 dev 继续
 git checkout dev
 ```
 
-### ⚠️ 重要提醒
+### Vercel 自动行为
 
-- **不要直接在 main 上开发** - 会影响线上用户
-- **先在 dev 测试** - Preview 环境验证通过后再合并
-- **保持 dev 同步** - 合并前先 `git pull origin main` 确保最新
+| 推送分支 | Vercel 结果 |
+|----------|-------------|
+| `dev` | 生成 Preview URL（供测试） |
+| `main` | 更新 Production（线上用户可见） |
 
-### Vercel 行为
+### ⚠️ 重要规则
 
-- push `dev` → 生成 Preview URL（供测试）
-- push `main` → 更新 Production（线上）
+- **不要直接在 main 开发** → 会影响线上用户
+- **始终：dev 开发 → Preview 测试 → 合并 main**
 
 ## 🌐 部署
 
@@ -209,6 +208,8 @@ git checkout dev
   }
 }
 ```
+
+
 
 ## 🤝 贡献
 
