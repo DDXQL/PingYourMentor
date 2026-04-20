@@ -27,7 +27,8 @@ const openai = new OpenAI({
 
 export async function createChatCompletion(
   messages: OpenAI.Chat.ChatCompletionMessageParam[],
-  responseFormat?: { type: 'json_object' }
+  responseFormat?: { type: 'json_object' },
+  options?: { timeout?: number }
 ) {
   console.log('[OpenAI] Creating chat completion...');
   console.log('[OpenAI] Model:', MODEL);
@@ -39,6 +40,8 @@ export async function createChatCompletion(
       max_tokens: MAX_TOKENS,
       temperature: TEMPERATURE,
       response_format: responseFormat,
+    }, {
+      timeout: options?.timeout || 60000, // 默认 60 秒超时
     });
 
     return response.choices[0].message.content;

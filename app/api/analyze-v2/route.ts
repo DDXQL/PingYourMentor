@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { profileAgent, decisionAgent, emailAgent } from '@/lib/agents';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 // 验证决策数据
 function validateDecision(decision: any) {
