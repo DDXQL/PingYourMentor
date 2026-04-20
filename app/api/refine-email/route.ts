@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
 
     const systemPrompt = `You are a professional email writing assistant specializing in academic cold emails.
 
-Your task is to rewrite the given email to be more professional, concise, and polite.
+Your task is to rewrite the given email to be more professional, concise, and polite. Return ONLY the improved email as JSON.
 
 Requirements:
 - Keep it concise (150-250 words)
@@ -30,11 +30,11 @@ Requirements:
 - Maintain all key information from the original
 - Return ONLY the improved email, no explanations`;
 
-    const userPrompt = `Please improve the following email:
+    const userPrompt = `Please improve the following email and return it as JSON:
 
 ${body.email}
 
-Return the improved email in the same format (with subject and body).`;
+Return the improved email in JSON format with "subject" and "body" fields.`;
 
     const response = await createChatCompletion(
       [
