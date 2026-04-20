@@ -68,6 +68,8 @@ export async function riskAnalysis(
 
   const response = await createChatCompletion(messages, { type: 'json_object' });
 
+  console.log('[Risk Agent] RAW RESPONSE:', response);
+
   if (!response) {
     throw new Error('Failed to analyze risks');
   }

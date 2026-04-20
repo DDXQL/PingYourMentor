@@ -73,6 +73,8 @@ export async function strategyGeneration(
 
   const response = await createChatCompletion(messages, { type: 'json_object' });
 
+  console.log('[Strategy Agent] RAW RESPONSE:', response);
+
   if (!response) {
     throw new Error('Failed to generate strategy');
   }

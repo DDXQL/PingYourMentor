@@ -61,6 +61,8 @@ export async function emailGeneration(
 
   const response = await createChatCompletion(messages, { type: 'json_object' });
 
+  console.log('[Email Agent v1] RAW RESPONSE:', response);
+
   if (!response) {
     throw new Error('Failed to generate email');
   }

@@ -65,6 +65,8 @@ export async function studentAnalysis(resumeText: string): Promise<StudentAnalys
 
   const response = await createChatCompletion(messages, { type: 'json_object' });
 
+  console.log('[Student Agent] RAW RESPONSE:', response);
+
   if (!response) {
     throw new Error('Failed to analyze student profile');
   }

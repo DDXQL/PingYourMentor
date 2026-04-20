@@ -39,7 +39,9 @@ export async function profileAgent(mentorText: string, resumeText: string): Prom
 ${mentorText}
 
 学生简历：
-${resumeText}`;
+${resumeText}
+
+请以JSON格式输出分析结果。`;
 
   const response = await createChatCompletion(
     [
@@ -48,6 +50,8 @@ ${resumeText}`;
     ],
     { type: 'json_object' }
   );
+
+  console.log('[Profile Agent] RAW RESPONSE:', response);
 
   if (!response) {
     throw new Error('Profile agent 返回为空');

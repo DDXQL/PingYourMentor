@@ -76,6 +76,8 @@ export async function mentorAnalysis(mentorText: string): Promise<MentorAnalysis
 
   const response = await createChatCompletion(messages, { type: 'json_object' });
 
+  console.log('[Mentor Agent] RAW RESPONSE:', response);
+
   if (!response) {
     throw new Error('Failed to analyze mentor information');
   }

@@ -65,6 +65,8 @@ export async function matchAnalysis(
 
   const response = await createChatCompletion(messages, { type: 'json_object' });
 
+  console.log('[Match Agent] RAW RESPONSE:', response);
+
   if (!response) {
     throw new Error('Failed to analyze match');
   }
