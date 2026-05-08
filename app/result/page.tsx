@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import type { AnalysisResult } from '@/types';
 import SummaryCard from '@/components/result/SummaryCard';
@@ -11,29 +11,65 @@ import StrategyPanel from '@/components/result/StrategyPanel';
 import EmailDraftPanel from '@/components/result/EmailDraftPanel';
 import DetailsCollapse from '@/components/result/DetailsCollapse';
 
-export default function ResultPage() {
+function ResultContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [mentorText, setMentorText] = useState('');
+  const [resumeText, setResumeText] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
   const [isRegenerating, setIsRegenerating] = useState(false);
 
   useEffect(() => {
-    const stored = sessionStorage.getItem('analysisResult');
-    if (!stored) {
-      router.push('/');
-      return;
+    async function loadResult() {
+      const id = searchParams.get('id');
+      
+      if (id) {
+        // 优先从 API 获取
+        try {
+          const response = await fetch(`/api/result?id=${encodeURIComponent(id)}`);
+          const data = await response.json();
+          
+          if (data.success && data.data) {
+            setResult(data.data.result);
+            setMentorText(data.data.mentorText || '');
+            setResumeText(data.data.resumeText || '');
+            setIsLoading(false);
+            return;
+          }
+        } catch (err) {
+          console.error('[Result] Failed to fetch from API:', err);
+        }
+      }
+      
+      // Fallback: 从 sessionStorage 获取
+      const stored = sessionStorage.getItem('analysisResult');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          setResult(parsed);
+          setMentorText(sessionStorage.getItem('mentorText') || '');
+          setResumeText(sessionStorage.getItem('resumeText') || '');
+        } catch {
+          setError('加载分析结果失败');
+        }
+      } else {
+        // 没有数据，跳转回首页
+        router.push('/');
+        return;
+      }
+      
+      setIsLoading(false);
     }
-
-    try {
-      const parsed = JSON.parse(stored);
-      setResult(parsed);
-    } catch {
-      setError('加载分析结果失败');
-    }
-  }, [router]);
+    
+    loadResult();
+  }, [searchParams, router]);
 
   const handleNewAnalysis = () => {
     sessionStorage.removeItem('analysisResult');
+    sessionStorage.removeItem('mentorText');
+    sessionStorage.removeItem('resumeText');
     router.push('/');
   };
 
@@ -42,28 +78,49 @@ export default function ResultPage() {
 
     setIsRegenerating(true);
     try {
-      const mentorText = sessionStorage.getItem('mentorText') || '';
-      const resumeText = sessionStorage.getItem('resumeText') || '';
+      const storedMentorText = sessionStorage.getItem('mentorText') || mentorText;
+      const storedResumeText = sessionStorage.getItem('resumeText') || resumeText;
 
-      const response = await fetch('/api/analyze-v2', {
+      if (!storedMentorText || !storedResumeText) {
+        throw new Error('缺少原始输入数据');
+      }
+
+      const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mentorText, resumeText }),
+        body: JSON.stringify({ mentorText: storedMentorText, resumeText: storedResumeText }),
       });
 
       const data = await response.json();
       if (data.success && data.data) {
         setResult(data.data);
         sessionStorage.setItem('analysisResult', JSON.stringify(data.data));
+        
+        // 如果有新的 resultId，更新 URL
+        if (data.resultId) {
+          window.history.replaceState(null, '', `/result?id=${data.resultId}`);
+        }
       }
     } catch (err) {
       console.error('Regenerate failed:', err);
+      setError(err instanceof Error ? err.message : '重新生成失败');
     } finally {
       setIsRegenerating(false);
     }
   };
 
-  if (error) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">加载分析结果...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !result) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="text-center">
@@ -71,24 +128,13 @@ export default function ResultPage() {
             <span className="text-3xl">✕</span>
           </div>
           <h2 className="text-xl font-bold text-gray-900 mb-2">出错了</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
+          <p className="text-gray-600 mb-6">{error || '无法加载分析结果'}</p>
           <Link
             href="/"
             className="inline-block px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
           >
             返回首页
           </Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (!result) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">加载分析结果...</p>
         </div>
       </div>
     );
@@ -157,5 +203,20 @@ export default function ResultPage() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function ResultPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">加载中...</p>
+        </div>
+      </div>
+    }>
+      <ResultContent />
+    </Suspense>
   );
 }

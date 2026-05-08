@@ -1,18 +1,14 @@
 // =============================================================================
-// Agent Index - Export all agents
+// Agent Index - Export all agents and types
 // =============================================================================
 
-// v1.5 精简架构 (3次调用)
+// Agents
 export { profileAgent } from './profile';
 export { decisionAgent } from './decision';
-export { emailAgent } from './email-v2';
+export { emailAgent } from './email';
 
-// v1 架构 (6次调用，保留兼容)
-export { mentorAnalysis } from './mentor';
-export { studentAnalysis } from './student';
-export { matchAnalysis } from './match';
-export { riskAnalysis } from './risk';
-export { strategyGeneration } from './strategy';
-export { emailGeneration } from './email';
+// Types
+export type { EmailDraft, EmailDraftWithChinese } from './email';
 
+// OpenAI config
 export { createChatCompletion, openai, MODEL, MAX_TOKENS, TEMPERATURE } from './openai';

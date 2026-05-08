@@ -4,6 +4,7 @@
 // 提取导师和学生用于决策的核心信息
 
 import { createChatCompletion } from './openai';
+import debug from '@/lib/debug';
 
 export interface ProfileMentor {
   fields: string[];
@@ -67,7 +68,7 @@ ${resumeText}
     { type: 'json_object' }
   );
 
-  console.log('[Profile Agent] RAW RESPONSE:', response);
+  debug.log('[Profile Agent] RAW RESPONSE:', response);
 
   if (!response) {
     throw new Error('Profile agent 返回为空');
@@ -76,16 +77,29 @@ ${resumeText}
   try {
     const parsed = JSON.parse(response);
     
-    // 确保返回正确的结构
     if (!parsed.mentor || !parsed.student) {
-      console.error('[Profile Agent] Missing mentor or student in response:', parsed);
+      debug.error('[Profile Agent] Missing mentor or student in response:', parsed);
       throw new Error('Profile agent 返回缺少 mentor 或 student 字段');
     }
     
     return parsed as Profile;
   } catch (error) {
     if (error instanceof SyntaxError) {
-      throw new Error('Profile agent 返回格式错误: ' + response);
+      debug.error('[Profile Agent] JSON parse error. Raw response:', response);
+      return {
+        mentor: {
+          fields: [],
+          orientation: '不明确' as const,
+          requirements: [],
+          risk: '数据解析失败',
+        },
+        student: {
+          type: '混合' as const,
+          strengths: [],
+          weaknesses: [],
+          highlights: [],
+        },
+      };
     }
     throw error;
   }

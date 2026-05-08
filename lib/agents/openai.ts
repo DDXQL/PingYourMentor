@@ -3,13 +3,14 @@
 // =============================================================================
 
 import OpenAI from 'openai';
+import debug from '@/lib/debug';
 
-// 从环境变量读取 API Key
+// 从环境变量读取 API Key - 仅服务端使用
 const apiKey = process.env.OPENAI_API_KEY;
 const baseURL = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
 
 if (!apiKey) {
-  console.warn('[OpenAI Config] WARNING: OPENAI_API_KEY is not set!');
+  debug.warn('[OpenAI Config] WARNING: OPENAI_API_KEY is not set!');
 }
 
 export const MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
@@ -30,8 +31,8 @@ export async function createChatCompletion(
   responseFormat?: { type: 'json_object' },
   options?: { timeout?: number }
 ) {
-  console.log('[OpenAI] Creating chat completion...');
-  console.log('[OpenAI] Model:', MODEL);
+  debug.log('[OpenAI] Creating chat completion...');
+  debug.log('[OpenAI] Model:', MODEL);
 
   try {
     const response = await openai.chat.completions.create({
@@ -41,12 +42,12 @@ export async function createChatCompletion(
       temperature: TEMPERATURE,
       response_format: responseFormat,
     }, {
-      timeout: options?.timeout || 60000, // 默认 60 秒超时
+      timeout: options?.timeout || 60000,
     });
 
     return response.choices[0].message.content;
   } catch (error: any) {
-    console.error('[OpenAI] Error:', error.message);
+    debug.error('[OpenAI] Error:', error.message);
     throw error;
   }
 }

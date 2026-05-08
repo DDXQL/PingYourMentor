@@ -1,38 +1,60 @@
 // =============================================================================
 // Regenerate Email API Route
 // =============================================================================
-// 仅重新生成邮件，不重新运行所有 Agent
 
 import { NextRequest, NextResponse } from 'next/server';
-import { emailGeneration } from '@/lib/agents';
-import type { EmailDraft, AnalyzeResponse } from '@/types';
+import { emailAgent, profileAgent, decisionAgent } from '@/lib/agents';
+import debug from '@/lib/debug';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
+
+interface RegenerateRequest {
+  mentorText: string;
+  resumeText: string;
+  strategy?: {
+    tone: '学术' | '工程' | '简洁';
+    must: string[];
+    avoid: string[];
+    core: string;
+  };
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body: RegenerateRequest = await request.json();
 
-    if (!body.mentor || !body.student || !body.strategy) {
-      return NextResponse.json<AnalyzeResponse>(
-        { success: false, error: 'Missing required data for email generation' },
+    if (!body.mentorText || !body.resumeText) {
+      return NextResponse.json(
+        { success: false, error: 'Missing required data' },
         { status: 400 }
       );
     }
 
-    const email: EmailDraft = await emailGeneration(
-      body.mentor,
-      body.student,
-      body.strategy
+    let strategy = body.strategy;
+    if (!strategy) {
+      const profile = await profileAgent(body.mentorText, body.resumeText);
+      const decision = await decisionAgent(profile);
+      strategy = {
+        tone: decision.strategy?.tone || '简洁',
+        must: decision.strategy?.must || [],
+        avoid: decision.strategy?.avoid || [],
+        core: decision.strategy?.core || '突出匹配点',
+      };
+    }
+
+    const email = await emailAgent(
+      { fields: [], orientation: '不明确', requirements: [], risk: '' },
+      { type: '混合', strengths: [], weaknesses: [], highlights: [] },
+      strategy
     );
 
-    return NextResponse.json<AnalyzeResponse>({
+    return NextResponse.json({
       success: true,
-      data: email as any,
+      data: email,
     });
   } catch (error) {
-    console.error('Email regeneration error:', error);
-    return NextResponse.json<AnalyzeResponse>(
+    debug.error('[Regenerate Email] Error:', error);
+    return NextResponse.json(
       {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to regenerate email',

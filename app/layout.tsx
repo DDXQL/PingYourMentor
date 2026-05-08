@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { ErrorBoundary } from '@/components';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -34,7 +35,9 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" />
       </head>
       <body className="min-h-screen bg-gray-50 antialiased">
-        {children}
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
       </body>
     </html>
   );

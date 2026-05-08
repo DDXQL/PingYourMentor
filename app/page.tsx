@@ -94,27 +94,15 @@ export default function HomePage() {
     setError('');
 
     try {
-      const response = await fetch('/api/analyze-v2', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          mentorText,
-          resumeText,
-        }),
-      });
+      // 保存原始输入
+      sessionStorage.setItem('mentorText', mentorText);
+      sessionStorage.setItem('resumeText', resumeText);
+      sessionStorage.removeItem('analysisResult'); // 清除旧结果
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || '分析失败');
-      }
-
-      sessionStorage.setItem('analysisResult', JSON.stringify(data.data));
-      router.push('/result');
+      // 跳转到分析页面
+      router.push('/analyze');
     } catch (err) {
-      setError(err instanceof Error ? err.message : '分析失败，请重试');
+      setError(err instanceof Error ? err.message : '提交失败');
     } finally {
       setIsLoading(false);
     }

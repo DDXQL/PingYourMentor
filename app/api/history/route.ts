@@ -4,8 +4,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getRecentAnalyses, getAnalysisById } from '@/lib/db';
+import debug from '@/lib/debug';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
     const analyses = await getRecentAnalyses(limit, offset);
     return NextResponse.json({ success: true, data: analyses });
   } catch (error) {
-    console.error('History error:', error);
+    debug.error('[History API] Error:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch history' },
       { status: 500 }

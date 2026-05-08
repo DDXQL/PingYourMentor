@@ -5,6 +5,7 @@
 
 import { createChatCompletion } from './openai';
 import type { Profile } from './profile';
+import debug from '@/lib/debug';
 
 export interface Risk {
   level: '高' | '中' | '低';
@@ -85,12 +86,30 @@ ${JSON.stringify(profile.student, null, 2)}
     throw new Error('Decision agent 返回为空');
   }
 
-  console.log('[Decision Agent] Raw response:', response);
+  debug.log('[Decision Agent] Raw response:', response);
 
   try {
     const parsed = JSON.parse(response) as Decision;
     return parsed;
-  } catch {
-    throw new Error('Decision agent 返回格式错误: ' + response);
+  } catch (error) {
+    debug.error('[Decision Agent] JSON parse error. Raw response:', response);
+    return {
+      score: 50,
+      decision: '谨慎',
+      summary: '分析失败，请稍后重试',
+      match: {
+        pros: [],
+        cons: [],
+      },
+      risks: [
+        { level: '中', text: '数据解析异常' },
+      ],
+      strategy: {
+        tone: '简洁',
+        must: [],
+        avoid: [],
+        core: '请稍后重试',
+      },
+    };
   }
 }

@@ -1,95 +1,102 @@
 // =============================================================================
-// Main Analysis API Route
+// Analysis API Route
 // =============================================================================
-// 串联所有 Agent，生成完整的分析结果
 
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  mentorAnalysis,
-  studentAnalysis,
-  matchAnalysis,
-  riskAnalysis,
-  strategyGeneration,
-  emailGeneration,
-} from '@/lib/agents';
+import { profileAgent, decisionAgent, emailAgent } from '@/lib/agents';
 import { saveAnalysis } from '@/lib/db';
-import type { AnalyzeRequest, AnalyzeResponse, AnalysisResult, Recommendation } from '@/types';
+import debug from '@/lib/debug';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
+
+function validateDecision(decision: any) {
+  return {
+    score: typeof decision.score === 'number' ? Math.max(0, Math.min(100, decision.score)) : 50,
+    decision: ['推荐', '谨慎', '不推荐'].includes(decision.decision) ? decision.decision : '谨慎',
+    summary: typeof decision.summary === 'string' ? decision.summary : '分析完成',
+    match: {
+      pros: Array.isArray(decision.match?.pros) ? decision.match.pros : [],
+      cons: Array.isArray(decision.match?.cons) ? decision.match.cons : [],
+    },
+    risks: Array.isArray(decision.risks) ? decision.risks.map((r: any) => ({
+      level: ['高', '中', '低'].includes(r.level) ? r.level : '中',
+      text: typeof r.text === 'string' ? r.text : '风险提示',
+    })) : [],
+    strategy: {
+      tone: ['学术', '工程', '简洁'].includes(decision.strategy?.tone) ? decision.strategy.tone : '简洁',
+      must: Array.isArray(decision.strategy?.must) ? decision.strategy.must : [],
+      avoid: Array.isArray(decision.strategy?.avoid) ? decision.strategy.avoid : [],
+      core: typeof decision.strategy?.core === 'string' ? decision.strategy.core : '突出匹配点',
+    },
+  };
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const body: AnalyzeRequest = await request.json();
+    const body = await request.json();
 
     if (!body.mentorText || !body.resumeText) {
-      return NextResponse.json<AnalyzeResponse>(
+      return NextResponse.json(
         { success: false, error: 'Missing required fields: mentorText and resumeText' },
         { status: 400 }
       );
     }
 
     if (body.mentorText.length < 50) {
-      return NextResponse.json<AnalyzeResponse>(
+      return NextResponse.json(
         { success: false, error: 'Mentor text is too short. Please provide more detailed information.' },
         { status: 400 }
       );
     }
 
     if (body.resumeText.length < 50) {
-      return NextResponse.json<AnalyzeResponse>(
+      return NextResponse.json(
         { success: false, error: 'Resume text is too short. Please provide more detailed information.' },
         { status: 400 }
       );
     }
 
     const startTime = Date.now();
+    debug.log('[Analysis] Starting...');
 
-    const mentor = await mentorAnalysis(body.mentorText);
+    debug.log('[Analysis] Step 1: Profile Agent...');
+    const profile = await profileAgent(body.mentorText, body.resumeText);
 
-    const student = await studentAnalysis(body.resumeText);
+    debug.log('[Analysis] Step 2: Decision Agent...');
+    const decision = await decisionAgent(profile);
 
-    const match = await matchAnalysis(mentor, student);
+    const validatedDecision = validateDecision(decision);
 
-    const risk = await riskAnalysis(mentor, student, match);
+    debug.log('[Analysis] Step 3: Email Agent...');
+    const email = await emailAgent(profile.mentor, profile.student, validatedDecision.strategy);
 
-    const strategy = await strategyGeneration(mentor, student, match, risk);
+    const processingTime = Date.now() - startTime;
+    debug.log(`[Analysis] Completed in ${processingTime}ms`);
 
-    const email = await emailGeneration(mentor, student, strategy);
-
-    const recommendation = determineRecommendation(match, risk);
-
-    const overallSummary = generateOverallSummary(mentor, student, match, risk, recommendation);
-
-    const result: AnalysisResult = {
-      mentor,
-      student,
-      match,
-      risk,
-      strategy,
+    const fullResult = {
+      ...validatedDecision,
       email,
-      recommendation,
-      overallSummary,
       generatedAt: new Date().toISOString(),
     };
 
-    saveAnalysis({
+    const resultId = await saveAnalysis({
       mentorText: body.mentorText,
       resumeText: body.resumeText,
-      result,
-      mentorName: mentor.name,
-      studentName: student.name,
-    }).catch((err) => console.error('Failed to save analysis:', err));
+      result: fullResult,
+    });
 
-    const processingTime = Date.now() - startTime;
-    console.log(`Analysis completed in ${processingTime}ms`);
+    if (resultId) {
+      debug.log(`[Analysis] Saved with ID: ${resultId}`);
+    }
 
-    return NextResponse.json<AnalyzeResponse>({
+    return NextResponse.json({
       success: true,
-      data: result,
+      data: fullResult,
+      resultId,
     });
   } catch (error) {
-    console.error('Analysis error:', error);
-    return NextResponse.json<AnalyzeResponse>(
+    debug.error('[Analysis] Error:', error);
+    return NextResponse.json(
       {
         success: false,
         error: error instanceof Error ? error.message : 'Analysis failed',
@@ -97,45 +104,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-function determineRecommendation(
-  match: { overallScore: number },
-  risk: { overallRiskLevel: string; dealBreakers: string[] }
-): Recommendation {
-  if (risk.dealBreakers.length > 0) {
-    return 'not_recommended';
-  }
-
-  if (match.overallScore >= 70 && risk.overallRiskLevel === 'low') {
-    return 'highly_recommended';
-  }
-
-  if (match.overallScore >= 50 && risk.overallRiskLevel !== 'high') {
-    return 'caution';
-  }
-
-  return 'not_recommended';
-}
-
-function generateOverallSummary(
-  mentor: { name?: string; institution: string; title: string },
-  student: { name?: string; academicBackground: { degree: string; major: string } },
-  match: { overallScore: number; alignmentSummary: string },
-  risk: { overallRiskLevel: string; riskSummary: string },
-  recommendation: Recommendation
-): string {
-  const mentorName = mentor.name || '该导师';
-  const studentName = student.name || '你';
-  const degree = student.academicBackground.degree;
-
-  const recommendationText = {
-    highly_recommended: '强烈推荐联系',
-    caution: '建议谨慎联系',
-    not_recommended: '不建议联系',
-  }[recommendation];
-
-  return `${studentName}的背景与${mentorName}的研究方向存在${
-    match.overallScore >= 70 ? '较高' : match.overallScore >= 50 ? '一定' : '较低'
-  }的匹配度。${recommendationText}。`;
 }

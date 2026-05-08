@@ -4,6 +4,7 @@
 
 import { supabaseAdmin } from './supabase';
 import type { AnalysisResult } from '@/types';
+import debug from '@/lib/debug';
 
 export interface SaveAnalysisParams {
   mentorText: string;
@@ -36,7 +37,7 @@ export interface FullAnalysisRecord {
 
 export async function saveAnalysis(params: SaveAnalysisParams): Promise<string | null> {
   if (!supabaseAdmin) {
-    console.warn('Supabase admin client not configured');
+    debug.warn('[DB] Supabase admin client not configured');
     return null;
   }
 
@@ -52,13 +53,13 @@ export async function saveAnalysis(params: SaveAnalysisParams): Promise<string |
     });
 
     if (error) {
-      console.error('Failed to save analysis:', error);
+      debug.error('[DB] Failed to save analysis:', error);
       return null;
     }
 
     return data as string;
   } catch (error) {
-    console.error('Failed to save analysis:', error);
+    debug.error('[DB] Failed to save analysis:', error);
     return null;
   }
 }
@@ -68,7 +69,7 @@ export async function getRecentAnalyses(
   offset: number = 0
 ): Promise<RecentAnalysis[]> {
   if (!supabaseAdmin) {
-    console.warn('Supabase admin client not configured');
+    debug.warn('[DB] Supabase admin client not configured');
     return [];
   }
 
@@ -79,20 +80,20 @@ export async function getRecentAnalyses(
     });
 
     if (error) {
-      console.error('Failed to get recent analyses:', error);
+      debug.error('[DB] Failed to get recent analyses:', error);
       return [];
     }
 
     return (data || []) as RecentAnalysis[];
   } catch (error) {
-    console.error('Failed to get recent analyses:', error);
+    debug.error('[DB] Failed to get recent analyses:', error);
     return [];
   }
 }
 
 export async function getAnalysisById(id: string): Promise<FullAnalysisRecord | null> {
   if (!supabaseAdmin) {
-    console.warn('Supabase admin client not configured');
+    debug.warn('[DB] Supabase admin client not configured');
     return null;
   }
 
@@ -102,14 +103,14 @@ export async function getAnalysisById(id: string): Promise<FullAnalysisRecord | 
     });
 
     if (error) {
-      console.error('Failed to get analysis by id:', error);
+      debug.error('[DB] Failed to get analysis by id:', error);
       return null;
     }
 
     const records = data as FullAnalysisRecord[];
     return records.length > 0 ? records[0] : null;
   } catch (error) {
-    console.error('Failed to get analysis by id:', error);
+    debug.error('[DB] Failed to get analysis by id:', error);
     return null;
   }
 }

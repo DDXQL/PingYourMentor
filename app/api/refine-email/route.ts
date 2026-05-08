@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createChatCompletion } from '@/lib/agents/openai';
+import debug from '@/lib/debug';
 
 export const runtime = 'nodejs';
 
@@ -18,9 +19,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const systemPrompt = `You are a professional email writing assistant specializing in academic cold emails.
+    const isChineseEmail = /[\u4e00-\u9fa5]/.test(body.email);
 
-Your task is to rewrite the given email to be more professional, concise, and polite. Return ONLY the improved email as JSON.
+    const systemPrompt = isChineseEmail
+      ? `你是一位专业的留学套磁邮件写作助手。
+
+你的任务是将给定的邮件润色得更加专业、简洁、礼貌。
+
+要求：
+- 保持简洁（150-250字左右）
+- 使用正式但友好的语气
+- 去除模板化表达
+- 保持个人化和针对性
+- 保留原文关键信息
+- 只返回润色后的邮件内容，不要解释`
+
+      : `You are a professional academic cold email writing assistant.
+
+Your task is to rewrite the given email to be more professional, concise, and polite.
 
 Requirements:
 - Keep it concise (150-250 words)
@@ -30,7 +46,13 @@ Requirements:
 - Maintain all key information from the original
 - Return ONLY the improved email, no explanations`;
 
-    const userPrompt = `Please improve the following email and return it as JSON:
+    const userPrompt = isChineseEmail
+      ? `请润色以下邮件：
+
+${body.email}
+
+请以JSON格式返回润色后的邮件，包含 "subject" 和 "body" 字段。`
+      : `Please improve the following email and return it as JSON:
 
 ${body.email}
 
@@ -51,8 +73,14 @@ Return the improved email in JSON format with "subject" and "body" fields.`;
     let refined;
     try {
       refined = JSON.parse(response);
-    } catch {
-      refined = { body: response };
+    } catch (parseError) {
+      debug.error('[Refine Email] JSON parse error. Raw response:', response);
+      const bodyMatch = response.match(/"body"\s*:\s*"([^"]*)"/);
+      const subjectMatch = response.match(/"subject"\s*:\s*"([^"]*)"/);
+      refined = {
+        body: bodyMatch ? bodyMatch[1] : response,
+        subject: subjectMatch ? subjectMatch[1] : '',
+      };
     }
 
     return NextResponse.json({
@@ -60,7 +88,7 @@ Return the improved email in JSON format with "subject" and "body" fields.`;
       data: refined,
     });
   } catch (error) {
-    console.error('[Refine Email] Error:', error);
+    debug.error('[Refine Email] Error:', error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : 'Refine failed' },
       { status: 500 }
