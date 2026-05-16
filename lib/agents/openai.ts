@@ -1,19 +1,19 @@
 // =============================================================================
-// OpenAI Client Configuration
+// OpenAI-compatible Client Configuration for local vLLM
 // =============================================================================
 
 import OpenAI from 'openai';
 import debug from '@/lib/debug';
 
-// 从环境变量读取 API Key - 仅服务端使用
-const apiKey = process.env.OPENAI_API_KEY;
-const baseURL = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
+// vLLM exposes an OpenAI-compatible API; API key is required by the SDK shape only.
+const apiKey = process.env.OPENAI_API_KEY || 'EMPTY';
+const baseURL = process.env.OPENAI_BASE_URL || 'http://localhost:8000/v1';
 
 if (!apiKey) {
   debug.warn('[OpenAI Config] WARNING: OPENAI_API_KEY is not set!');
 }
 
-export const MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
+export const MODEL = process.env.OPENAI_MODEL || 'Qwen2.5-7B';
 export const MAX_TOKENS = 4000;
 export const TEMPERATURE = 0.7;
 
